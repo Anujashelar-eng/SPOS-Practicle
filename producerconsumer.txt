@@ -1,0 +1,94 @@
+package producerconsumer;
+
+import java.util.LinkedList;
+import java.util.concurrent.Semaphore;
+
+class ProducerConsumerWithMutex {
+    private final LinkedList<Integer> buffer = new LinkedList<>();
+    private final int capacity = 5;
+    private final Object mutex = new Object();
+
+    public void produce() throws InterruptedException {
+        int value = 0;
+        while (true) {
+            synchronized (mutex) {
+                while (buffer.size() == capacity) mutex.wait();
+                buffer.add(value++);
+                System.out.println("Produced: " + (value - 1));
+                mutex.notify();
+            }
+            Thread.sleep(500);
+        }
+    }
+
+    public void consume() throws InterruptedException {
+        while (true) {
+            synchronized (mutex) {
+                while (buffer.isEmpty()) mutex.wait();
+                System.out.println("Consumed: " + buffer.removeFirst());
+                mutex.notify();
+            }
+            Thread.sleep(500);
+        }
+    }
+}
+
+class ProducerConsumerWithSemaphore {
+    private final LinkedList<Integer> buffer = new LinkedList<>();
+    private final int capacity = 5;
+    private final Semaphore empty = new Semaphore(capacity);
+    private final Semaphore full = new Semaphore(0);
+    private final Semaphore mutex = new Semaphore(1);
+
+    public void produce() throws InterruptedException {
+        int value = 0;
+        while (true) {
+            empty.acquire();
+            mutex.acquire();
+            buffer.add(value++);
+            System.out.println("Produced: " + (value - 1));
+            mutex.release();
+            full.release();
+            Thread.sleep(500);
+        }
+    }
+
+    public void consume() throws InterruptedException {
+        while (true) {
+            full.acquire();
+            mutex.acquire();
+            System.out.println("Consumed: " + buffer.removeFirst());
+            mutex.release();
+            empty.release();
+            Thread.sleep(500);
+        }
+    }
+}
+
+public class producerconsumer {
+    public static void main(String[] args) throws InterruptedException {
+        // Mutex Test
+        ProducerConsumerWithMutex pcMutex = new ProducerConsumerWithMutex();
+        Thread prodMutex = new Thread(() -> { try { pcMutex.produce(); } catch (InterruptedException ignored) {} });
+        Thread consMutex = new Thread(() -> { try { pcMutex.consume(); } catch (InterruptedException ignored) {} });
+
+        // Semaphore Test
+        ProducerConsumerWithSemaphore pcSemaphore = new ProducerConsumerWithSemaphore();
+        Thread prodSemaphore = new Thread(() -> { try { pcSemaphore.produce(); } catch (InterruptedException ignored) {} });
+        Thread consSemaphore = new Thread(() -> { try { pcSemaphore.consume(); } catch (InterruptedException ignored) {} });
+
+        System.out.println("Running Producer-Consumer with Mutex...");
+        prodMutex.start();
+        consMutex.start();
+        Thread.sleep(5000);
+        prodMutex.interrupt();
+        consMutex.interrupt();
+
+        System.out.println("Running Producer-Consumer with Semaphore...");
+        prodSemaphore.start();
+        consSemaphore.start();
+        Thread.sleep(5000);
+        prodSemaphore.interrupt();
+        consSemaphore.interrupt();
+    }
+}

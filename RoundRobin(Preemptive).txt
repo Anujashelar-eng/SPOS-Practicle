@@ -1,0 +1,97 @@
+package RoundRobin;
+
+
+import java.util.*;
+
+public class RoundRobinPreemptive {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+
+        System.out.println("Enter the number of processes: ");
+        int n = sc.nextInt();
+
+        int[] process = new int[n];
+        int[] arrivalTime = new int[n];
+        int[] burstTime = new int[n];
+        int[] remainingTime = new int[n];
+        int[] completionTime = new int[n];
+        int[] waitingTime = new int[n];
+        int[] turnaroundTime = new int[n];
+        boolean[] isCompleted = new boolean[n];
+        float avgTAT = 0;
+        float avgWT = 0;
+
+        for (int i = 0; i < n; i++) {
+            System.out.println("Enter the arrival time for process " + (i + 1) + " :");
+            arrivalTime[i] = sc.nextInt();
+            System.out.println("Enter the burst time for process " + (i + 1) + " :");
+            burstTime[i] = sc.nextInt();
+            remainingTime[i] = burstTime[i]; // Initialize remaining time as burst time
+            process[i] = i + 1;
+            isCompleted[i] = false;
+        }
+
+        System.out.print("Enter time quantum: ");
+        int timeQuantum = sc.nextInt();
+        sc.close();
+
+        int currentTime = 0;
+        int completed = 0;
+
+        Queue<Integer> queue = new LinkedList<>();
+        for (int i = 0; i < n; i++) {
+            if (arrivalTime[i] == 0) {
+                queue.add(i);
+            }
+        }
+
+        while (completed != n) {
+            if (queue.isEmpty()) {
+                currentTime++;
+                for (int i = 0; i < n; i++) {
+                    if (arrivalTime[i] <= currentTime && !isCompleted[i] && !queue.contains(i)) {
+                        queue.add(i);
+                    }
+                }
+                continue;
+            }
+
+            int index = queue.poll();
+
+            int timeToExecute = Math.min(timeQuantum, remainingTime[index]);
+            currentTime += timeToExecute;
+            remainingTime[index] -= timeToExecute;
+
+            // Check for newly arrived processes during this time slice
+            for (int i = 0; i < n; i++) {
+                if (arrivalTime[i] > currentTime - timeToExecute && arrivalTime[i] <= currentTime && !isCompleted[i] && !queue.contains(i)) {
+                    queue.add(i);
+                }
+            }
+
+            if (remainingTime[index] > 0) {
+                queue.add(index);
+            } else {
+                completionTime[index] = currentTime;
+                turnaroundTime[index] = completionTime[index] - arrivalTime[index];
+                waitingTime[index] = turnaroundTime[index] - burstTime[index];
+                isCompleted[index] = true;
+                completed++;
+            }
+        }
+
+        for (int i = 0; i < n; i++) {
+            avgTAT += turnaroundTime[i];
+            avgWT += waitingTime[i];
+        }
+
+        System.out.println("Process\tArrival\tBurst\tCompletion\tTurnaround\tWaiting");
+        for (int i = 0; i < n; i++) {
+            System.out.println(process[i] + "\t" + arrivalTime[i] + "\t" + burstTime[i] + "\t" + completionTime[i] +
+                    "\t\t" + turnaroundTime[i] + "\t\t" + waitingTime[i]);
+        }
+
+        System.out.println("Average Turnaround Time: " + (avgTAT / n));
+        System.out.println("Average Waiting Time: " + (avgWT / n));
+    }
+}

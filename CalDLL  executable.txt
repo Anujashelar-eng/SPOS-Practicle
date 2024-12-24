@@ -1,0 +1,11 @@
+#include<stdio.h> 
+#include "CalculatorDLL\CalculatorDLL.h" 
+ 
+int main() 
+{ 
+ int a; 
+ a = Addition(10,5); 
+ printf("Addition=%d\n",a);  
+ 
+ return 0; 
+}
